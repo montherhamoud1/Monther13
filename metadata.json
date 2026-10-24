@@ -1,0 +1,6 @@
+{
+  "name": "RestoOps ERP",
+  "description": "Enterprise-grade Restaurant Operations & ERP Platform with multi-company, multi-branch, POS, kitchen, and inventory management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

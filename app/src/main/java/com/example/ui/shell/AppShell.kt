@@ -145,28 +145,125 @@ fun AppShell(
                         )
                     }
                 ) {
+                    var isWebPortalMode by remember { mutableStateOf(false) }
+                    var showWebLinkDialog by remember { mutableStateOf(false) }
+                    val isAr = uiState.currentLanguage == AppLanguage.ARABIC
+
+                    if (showWebLinkDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showWebLinkDialog = false },
+                            title = {
+                                Text(
+                                    if (isAr) "🌐 رابط موقع الويب وتطبيق الجوال"
+                                    else "🌐 Web & Mobile Portal Links"
+                                )
+                            },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        if (isAr) "يمكنك الاطلاع على النظام كموقع ويب أو تطبيق جوال عبر الروابط التالية أو التبديل المباشر من الشريط العلوي:"
+                                        else "Access the system as a Website or Mobile App via these links or the top switcher bar:"
+                                    )
+                                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                                        Column(modifier = Modifier.padding(10.dp)) {
+                                            Text(
+                                                if (isAr) "رابط المعاينة والمشاركة (Web Preview URL):" else "Shared Web Preview URL:",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Text(
+                                                "https://ais-pre-7xbkxcvyc7zmyaqbpvdinp-30305831978.europe-west2.run.app",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
+                                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                                        Column(modifier = Modifier.padding(10.dp)) {
+                                            Text(
+                                                if (isAr) "رابط بيئة التطوير (Dev Web URL):" else "Development Web URL:",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.secondary
+                                            )
+                                            Text(
+                                                "https://ais-dev-7xbkxcvyc7zmyaqbpvdinp-30305831978.europe-west2.run.app",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                Button(onClick = {
+                                    isWebPortalMode = true
+                                    showWebLinkDialog = false
+                                }) {
+                                    Text(if (isAr) "فتح نسخة موقع الويب الآن" else "Open Web Version Now")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showWebLinkDialog = false }) {
+                                    Text(if (isAr) "إغلاق" else "Close")
+                                }
+                            }
+                        )
+                    }
+
                     Scaffold(
                         topBar = {
-                            RestoTopBar(
-                                branch = branch,
-                                user = user,
-                                language = uiState.currentLanguage,
-                                unreadNotificationCount = notifications.size,
-                                onMenuClick = {
-                                    coroutineScope.launch {
-                                        if (drawerState.isOpen) drawerState.close() else drawerState.open()
+                            Column {
+                                RestoTopBar(
+                                    branch = branch,
+                                    user = user,
+                                    language = uiState.currentLanguage,
+                                    unreadNotificationCount = notifications.size,
+                                    onMenuClick = {
+                                        coroutineScope.launch {
+                                            if (drawerState.isOpen) drawerState.close() else drawerState.open()
+                                        }
+                                    },
+                                    onBranchClick = { viewModel.setBranchSelectorOpen(true) },
+                                    onSearchClick = { viewModel.setGlobalSearchOpen(true) },
+                                    onLanguageClick = { viewModel.toggleLanguage() },
+                                    onThemeClick = { viewModel.toggleTheme() },
+                                    onNotificationClick = { viewModel.setNotificationsOpen(true) },
+                                    onUserClick = { viewModel.setUserMenuOpen(true) }
+                                )
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                                    tonalElevation = 2.dp
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        FilterChip(
+                                            selected = !isWebPortalMode,
+                                            onClick = { isWebPortalMode = false },
+                                            label = {
+                                                Text(if (isAr) "📱 وضع تطبيق الجوال (Mobile App)" else "📱 Mobile App Mode")
+                                            }
+                                        )
+                                        FilterChip(
+                                            selected = isWebPortalMode,
+                                            onClick = { isWebPortalMode = true },
+                                            label = {
+                                                Text(if (isAr) "🌐 وضع موقع الويب (Web Site)" else "🌐 Website Mode")
+                                            }
+                                        )
+                                        AssistChip(
+                                            onClick = { showWebLinkDialog = true },
+                                            label = {
+                                                Text(if (isAr) "🔗 رابط الويب" else "🔗 Web URL")
+                                            }
+                                        )
                                     }
-                                },
-                                onBranchClick = { viewModel.setBranchSelectorOpen(true) },
-                                onSearchClick = { viewModel.setGlobalSearchOpen(true) },
-                                onLanguageClick = { viewModel.toggleLanguage() },
-                                onThemeClick = { viewModel.toggleTheme() },
-                                onNotificationClick = { viewModel.setNotificationsOpen(true) },
-                                onUserClick = { viewModel.setUserMenuOpen(true) }
-                            )
+                                }
+                            }
                         },
                         bottomBar = {
-                            if (!isWideScreen) {
+                            if (!isWideScreen && !isWebPortalMode) {
                                 RestoBottomBar(
                                     currentSection = uiState.currentSection,
                                     language = uiState.currentLanguage,
@@ -177,6 +274,21 @@ fun AppShell(
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         contentWindowInsets = WindowInsets.safeDrawing
                     ) { innerPadding ->
+                        if (isWebPortalMode) {
+                            androidx.compose.ui.viewinterop.AndroidView(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding),
+                                factory = { ctx ->
+                                    android.webkit.WebView(ctx).apply {
+                                        settings.javaScriptEnabled = true
+                                        settings.domStorageEnabled = true
+                                        webViewClient = android.webkit.WebViewClient()
+                                        loadUrl("file:///android_asset/web/index.html")
+                                    }
+                                }
+                            )
+                        } else {
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -562,6 +674,7 @@ fun AppShell(
                                     )
                                 }
                             }
+                        }
                         }
                     }
                 }

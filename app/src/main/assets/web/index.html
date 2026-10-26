@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RestoOps Enterprise ERP & POS — جميع المراحل 1 إلى 12</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Cairo', 'Inter', sans-serif; }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- Top Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 font-extrabold text-xl shadow">R</div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base md:text-lg text-white" id="hdr-title">RestoOps Enterprise ERP & POS</h1>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">Web & Mobile Live</span>
+        </div>
+        <p class="text-xs text-slate-400" id="hdr-subtitle">مجموعة الحياة للضيافة • فرع وسط المدينة الرئيسي (DOWNTOWN-HQ)</p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Branch Selector -->
+      <select id="branch-select" onchange="changeBranch(this.value)" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200">
+        <option value="branch_01">فرع وسط المدينة الرئيسي (Downtown HQ)</option>
+        <option value="branch_02">فرع المرسى بوليفارد (Marina Boulevard)</option>
+        <option value="branch_03">فرع المطار السريع (Airport Express)</option>
+      </select>
+
+      <!-- Active Role Switcher (RBAC) -->
+      <select id="role-select" onchange="changeRole(this.value)" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-amber-300 font-semibold">
+        <option value="ROLE_ADMIN">الدور: المدير العام (Full Admin)</option>
+        <option value="ROLE_MANAGER">الدور: مدير الفرع (Branch Manager)</option>
+        <option value="ROLE_CASHIER">الدور: الكاشير (POS Cashier)</option>
+        <option value="ROLE_WAITER">الدور: النادل (Waiter)</option>
+        <option value="ROLE_CHEF">الدور: الشيف (Kitchen KDS)</option>
+      </select>
+
+      <!-- Viewport Mode Toggle (Web vs Mobile) -->
+      <button onclick="toggleViewportMode()" id="viewport-btn" class="px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/40 text-xs font-bold text-indigo-300">
+        📱 عرض شاشة الجوال / 🖥️ عرض الويب
+      </button>
+
+      <!-- Language Toggle -->
+      <button onclick="toggleLang()" id="lang-btn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-amber-400">
+        EN / عربي
+      </button>
+
+      <!-- Download Android APK Button -->
+      <a href="/download/RestoOps-Enterprise.apk" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow">
+        <span>📲 تحميل تطبيق الجوال (APK)</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div id="app-viewport-wrapper" class="flex-1 flex flex-col lg:flex-row overflow-hidden transition-all duration-300">
+    <!-- Sidebar Navigation (All 12 Phases) -->
+    <aside class="w-full lg:w-64 bg-slate-900 border-b lg:border-b-0 lg:border-l border-slate-800 p-2 flex lg:flex-col gap-1 overflow-x-auto scrollbar-thin shrink-0" id="sidebar-nav">
+    </aside>
+
+    <!-- Dynamic Content Area -->
+    <main class="flex-1 p-4 md:p-6 overflow-y-auto space-y-6" id="main-content">
+    </main>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 left-5 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-sm font-semibold hidden z-50 border border-emerald-400/40"></div>
+
+  <script>
+    const state = {
+      lang: 'ar',
+      mobileFrame: false,
+      branchId: 'branch_01',
+      role: 'ROLE_ADMIN',
+      activeSection: 'dashboard',
+      offlineMode: false,
+      cart: [
+        { id: 'p1', nameAr: 'برجر أنجوس بالكمأة', nameEn: 'Truffle Angus Burger', price: 18.50, qty: 2, station: 'GRILL', mods: 'جبن شيدر معتق + صوص كمأة' },
+        { id: 'p4', nameAr: 'بطاطس بالأعشاب والبارميزان', nameEn: 'Parmesan Herb Fries', price: 7.50, qty: 1, station: 'FRYER', mods: 'مقرمش إضافي' }
+      ],
+      selectedOrderType: 'DINE_IN',
+      products: [
+        { id: 'p1', sku: 'BUR-001', cat: 'برجر مشوي', nameAr: 'برجر أنجوس بالكمأة', nameEn: 'Truffle Angus Burger', price: 18.50, cost: 5.40, station: 'GRILL', stock: 84 },
+        { id: 'p2', sku: 'BUR-002', cat: 'برجر مشوي', nameAr: 'برجر واغيو مدخن مزدوج', nameEn: 'Double Smoked Wagyu Burger', price: 22.00, cost: 6.80, station: 'GRILL', stock: 62 },
+        { id: 'p10', sku: 'PIZ-001', cat: 'بيتزا على الحطب', nameAr: 'بيتزا بوراتا والكمأة على الحطب', nameEn: 'Woodfire Truffle Burrata Pizza', price: 24.00, cost: 6.10, station: 'PIZZA', stock: 45 },
+        { id: 'p4', sku: 'SID-001', cat: 'مقبلات ومقليات', nameAr: 'بطاطس بالأعشاب والبارميزان', nameEn: 'Parmesan Herb Fries', price: 7.50, cost: 1.85, station: 'FRYER', stock: 140 },
+        { id: 'p6', sku: 'DRK-001', cat: 'مشروبات طازجة', nameAr: 'موهيتو باشن فروت', nameEn: 'Passionfruit Mojito', price: 6.50, cost: 1.20, station: 'DRINKS', stock: 110 },
+        { id: 'p8', sku: 'DES-001', cat: 'حلويات', nameAr: 'كيكة التمر الدافئة مع الجيلاتو', nameEn: 'Warm Sticky Date Pudding', price: 11.00, cost: 2.90, station: 'DESSERT', stock: 38 }
+      ],
+      tables: [
+        { id: 't1', num: 'T-01', floor: 'الطابق الأرضي', zone: 'الصالة الرئيسية', seats: 2, status: 'AVAILABLE', qrToken: 'QR-SIG-9F4A2C81E0', orderId: null, waiter: 'سارة نادر' },
+        { id: 't2', num: 'T-02', floor: 'الطابق الأرضي', zone: 'الصالة الرئيسية', seats: 4, status: 'OCCUPIED', qrToken: 'QR-SIG-3B8D1E74A2', orderId: 'ORD-1041', waiter: 'سارة نادر' },
+        { id: 't3', num: 'T-03', floor: 'الطابق الأرضي', zone: 'الصالة الرئيسية', seats: 4, status: 'AVAILABLE', qrToken: 'QR-SIG-7C2E9A11F5', orderId: null, waiter: 'سارة نادر' },
+        { id: 't4', num: 'T-04', floor: 'الطابق الأرضي', zone: 'ركن العائلات VIP', seats: 6, status: 'WAITING_PAYMENT', qrToken: 'QR-SIG-5D1F8B39C4', orderId: 'ORD-1042', waiter: 'أحمد منصور' },
+        { id: 't5', num: 'T-05', floor: 'التراس الخارجي', zone: 'تراس الحديقة', seats: 4, status: 'RESERVED', qrToken: 'QR-SIG-2A6C4E90B8', orderId: null, waiter: 'أحمد منصور' },
+        { id: 't6', num: 'T-06', floor: 'التراس الخارجي', zone: 'تراس الحديقة', seats: 8, status: 'CLEANING', qrToken: 'QR-SIG-8E3A7D22C1', orderId: null, waiter: 'سارة نادر' }
+      ],
+      reservations: [
+        { id: 'res_01', code: 'RSV-8821', customer: 'فيصل العتيبي', phone: '+966 50 321 8890', table: 'T-05', time: '20:30', pax: 4, status: 'CONFIRMED', notes: 'طاولة في التراس - مناسبة خاصة' },
+        { id: 'res_02', code: 'RSV-8822', customer: 'نورة القحطاني', phone: '+966 55 901 4412', table: 'T-04', time: '21:00', pax: 6, status: 'SEATED', notes: 'كرسي أطفال إضافي' }
+      ],
+      orders: [
+        { id: 'ORD-1041', type: 'DINE_IN', channel: 'WAITER_APP', table: 'T-02', customer: 'طاولة T-02 (خالد السعيد)', total: 48.95, status: 'PREPARING', paid: 'UNPAID', time: 'منذ 8 د' },
+        { id: 'ORD-1042', type: 'DINE_IN', channel: 'QR_TABLE', table: 'T-04', customer: 'طاولة T-04 (ليلى الحربي - QR)', total: 74.80, status: 'READY', paid: 'PAID', time: 'منذ 16 د' },
+        { id: 'ORD-1043', type: 'DELIVERY', channel: 'CUSTOMER_APP', table: '-', customer: 'طارق المنصور', total: 52.40, status: 'OUT_FOR_DELIVERY', paid: 'COD', time: 'منذ 19 د' },
+        { id: 'ORD-1044', type: 'TAKEOUT', channel: 'POS', table: '-', customer: 'عميل كاشير سريع', total: 28.60, status: 'COMPLETED', paid: 'PAID', time: 'منذ 32 د' }
+      ],
+      kdsTickets: [
+        { id: 'KDS-901', orderId: 'ORD-1041', type: 'DINE_IN (T-02)', station: 'GRILL', stationAr: 'محطة الشواية (Grill)', items: ['2x برجر أنجوس بالكمأة (Medium Well)', '1x برجر واغيو مدخن'], status: 'PREPARING', elapsed: 9, sla: 12 },
+        { id: 'KDS-902', orderId: 'ORD-1041', type: 'DINE_IN (T-02)', station: 'FRYER', stationAr: 'محطة القلاية (Fryer)', items: ['2x بطاطس بالأعشاب والبارميزان'], status: 'READY', elapsed: 6, sla: 8 },
+        { id: 'KDS-903', orderId: 'ORD-1042', type: 'QR_TABLE (T-04)', station: 'PIZZA', stationAr: 'محطة البيتزا (Pizza Oven)', items: ['2x بيتزا بوراتا والكمأة على الحطب'], status: 'NEW', elapsed: 14, sla: 12 },
+        { id: 'KDS-904', orderId: 'ORD-1043', type: 'DELIVERY', station: 'PACKING', stationAr: 'محطة التغليف والتجميع (Expediter)', items: ['2x برجر أنجوس بالكمأة', '2x موهيتو باشن فروت'], status: 'READY', elapsed: 4, sla: 10 }
+      ],
+      customers: [
+        { id: 'c1', name: 'طارق المنصور', phone: '+966 55 888 9999', tier: 'GOLD', points: 1420, orders: 14, spend: 685.50, address: 'حي العليا، طريق الملك فهد، فيلا 14' },
+        { id: 'c2', name: 'ليلى الحربي', phone: '+966 50 442 1180', tier: 'PLATINUM', points: 2890, orders: 26, spend: 1340.00, address: 'حي النخيل، شارع التخصصي، مبنى 8' },
+        { id: 'c3', name: 'سلطان الدوسري', phone: '+966 54 119 7732', tier: 'SILVER', points: 640, orders: 6, spend: 245.00, address: 'حي الملقا، بوليفارد الرياض' }
+      ],
+      deliveries: [
+        { id: 'DEL-501', orderId: 'ORD-1043', customer: 'طارق المنصور', address: 'حي العليا، فيلا 14', zone: 'نطاق العليا (4.50$)', driver: 'فهد الشمري', status: 'ON_ROUTE', otp: '4829', total: 52.40, cod: true, elapsed: 19 },
+        { id: 'DEL-502', orderId: 'ORD-1045', customer: 'سلطان الدوسري', address: 'حي الملقا، بوليفارد', zone: 'نطاق شمال الرياض (6.00$)', driver: 'ياسر الحربي', status: 'ASSIGNED', otp: '9104', total: 39.00, cod: false, elapsed: 7 }
+      ],
+      drivers: [
+        { id: 'drv_01', name: 'فهد الشمري', phone: '+966 56 112 3344', vehicle: 'Toyota Hilux • أ ب ج 4821', shift: 'ONLINE', gpsConsent: true, codUnsettled: 142.80, completed: 9 },
+        { id: 'drv_02', name: 'ياسر الحربي', phone: '+966 56 998 1122', vehicle: 'Honda Bike • د هـ و 1092', shift: 'ONLINE', gpsConsent: true, codUnsettled: 54.00, completed: 6 }
+      ],
+      stockItems: [
+        { id: 'stk_1', code: 'ING-BEEF-01', nameAr: 'شرائح لحم بلاك أنجوس مبرد', warehouse: 'المستودع المركزي المبرد (Central)', qty: 145.0, unit: 'kg', reorder: 40.0, cost: 12.50, low: false },
+        { id: 'stk_2', code: 'ING-TRUF-02', nameAr: 'معجون وزيت الكمأة الإيطالي', warehouse: 'مستودع المطبخ الساخن (Kitchen)', qty: 6.5, unit: 'L', reorder: 10.0, cost: 28.00, low: true },
+        { id: 'stk_3', code: 'ING-BURR-03', nameAr: 'جبنة بوراتا طازجة', warehouse: 'مستودع الفرع الرئيسي (Branch)', qty: 8.0, unit: 'kg', reorder: 12.0, cost: 16.00, low: true },
+        { id: 'stk_4', code: 'ING-FRY-04', nameAr: 'بطاطس بلجيكية فاخرة', warehouse: 'المستودع المركزي المبرد (Central)', qty: 320.0, unit: 'kg', reorder: 80.0, cost: 2.40, low: false }
+      ],
+      inventoryLedger: [
+        { ref: 'SALE-ORD-1041', type: 'خصم وصفات مبيعات (SALE_CONSUMPTION)', item: 'شرائح لحم بلاك أنجوس مبرد', wh: 'مستودع المطبخ الساخن', delta: '-0.54 kg', after: '145.0 kg', by: 'OrderEngine Auto' },
+        { ref: 'GRN-PO-801', type: 'توريد مشتريات (PURCHASE_RECEIPT)', item: 'بطاطس بلجيكية فاخرة', wh: 'المستودع المركزي المبرد', delta: '+100.0 kg', after: '320.0 kg', by: 'كريم منصور' }
+      ],
+      journals: [
+        { num: 'JE-2026-0412', doc: 'ORDER #ORD-1042', desc: 'قيد مبيعات وضريبة وتكلفة بضاعة مباعة (Auto POS/QR Sale & COGS)', debit: 93.40, credit: 93.40, lines: [
+          'مدين 1010 صندوق النقدية والبطاقات: $74.80 | دائن 4100 إيرادات المبيعات: $68.00 | دائن 2100 ضريبة القيمة المضافة: $6.80',
+          'مدين 5100 تكلفة البضاعة المباعة (COGS): $18.60 | دائن 1300 مخزون المواد الغذائية: $18.60'
+        ]},
+        { num: 'JE-2026-0411', doc: 'PO-INV #PO-801', desc: 'قيد فاتورة توريد مشتريات مواد غذائية (Supplier Invoice)', debit: 1450.00, credit: 1450.00, lines: [
+          'مدين 1300 مخزون المواد الغذائية: $1,318.18 | مدين 2100 ضريبة مدخلات: $131.82 | دائن 2010 ذمم الموردين (AP): $1,450.00'
+        ]}
+      ],
+      employees: [
+        { code: 'EMP-01', name: 'ميرة حمود', dept: 'الإدارة العليا', role: 'مدير تنفيذي للعمليات', source: 'بصمة الوجه والكاميرا (TERMINAL_CAMERA)', status: 'PRESENT', checkIn: '08:02', salary: 4800, payStatus: 'PAID' },
+        { code: 'EMP-02', name: 'كريم منصور', dept: 'إدارة الفروع', role: 'مدير الفرع الرئيسي', source: 'جهاز البصمة الشبكي (FINGERPRINT_API)', status: 'PRESENT', checkIn: '08:45', salary: 3600, payStatus: 'PAID' },
+        { code: 'EMP-03', name: 'عمر طارق', dept: 'نقاط البيع POS', role: 'كاشير أول', source: 'بطاقة الكاشير + الكاميرا', status: 'PRESENT', checkIn: '09:00', salary: 2200, payStatus: 'APPROVED' }
+      ],
+      aiQuery: 'ما هي مبيعات اليوم والأصناف منخفضة المخزون والطلبات المتأخرة؟',
+      aiAnswer: 'إجمالي المبيعات النشطة: $204.75 عبر 4 طلبات (متوسط الطلب $51.19) • الأصناف تحت حد إعادة الطلب (2): معجون الكمأة الإيطالي (6.5 L)، جبنة بوراتا طازجة (8.0 kg) • صافي الربح الدفتري الموثق بالقيود: $6,420.00 (ميزان المراجعة متوازن 100%).'
+    };
+
+    const sections = [
+      { id: 'dashboard', icon: '📊', ar: '1. لوحة القيادة التنفيذية', en: '1. Executive Dashboard' },
+      { id: 'pos', icon: '🖥️', ar: '2. نقطة البيع الكاشير (POS)', en: '2. POS Terminal & Shifts' },
+      { id: 'tables', icon: '🍽️', ar: '3. الطاولات وQR والنادل والحجوزات', en: '3. Smart Tables, QR & Waiter' },
+      { id: 'kds', icon: '👨‍🍳', ar: '4. شاشة المطبخ اللحظية (KDS)', en: '4. Kitchen Display (KDS)' },
+      { id: 'customer', icon: '📱', ar: '5. تطبيق العميل والولاء وCRM', en: '5. Customer Portal & CRM' },
+      { id: 'delivery', icon: '🛵', ar: '6. إدارة التوصيل والسائقين', en: '6. Delivery & Driver Fleet' },
+      { id: 'inventory', icon: '📦', ar: '7. المخزون والمستودعات والمشتريات', en: '7. Inventory & Procurement' },
+      { id: 'accounting', icon: '🏦', ar: '8. المحاسبة والقيود والمالية', en: '8. Financial Accounting' },
+      { id: 'hr', icon: '👥', ar: '9. الموارد البشرية والحضور والرواتب', en: '9. HR, Attendance & Payroll' },
+      { id: 'menu', icon: '🍔', ar: '10. هندسة المنيو وتكلفة الوصفات', en: '10. Menu & Recipe Costing' },
+      { id: 'admin', icon: '🔐', ar: '11. الإدارة والفروع والصلاحيات RBAC', en: '11. Enterprise Admin & RBAC' },
+      { id: 'reports', icon: '📈', ar: '12. التقارير والتحليلات والذكاء الاصطناعي', en: '12. Reports, BI & AI Query' }
+    ];
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 3200);
+    }
+
+    function toggleLang() {
+      state.lang = state.lang === 'ar' ? 'en' : 'ar';
+      document.documentElement.lang = state.lang;
+      document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+      renderAll();
+    }
+
+    function toggleViewportMode() {
+      state.mobileFrame = !state.mobileFrame;
+      const wrapper = document.getElementById('app-viewport-wrapper');
+      const sidebar = document.getElementById('sidebar-nav');
+      const btn = document.getElementById('viewport-btn');
+      if (state.mobileFrame) {
+        wrapper.className = 'max-w-[430px] w-full mx-auto my-4 border-[6px] border-slate-700 rounded-[36px] shadow-2xl bg-slate-950 flex flex-col overflow-hidden h-[840px]';
+        sidebar.className = 'w-full bg-slate-900 border-b border-slate-800 p-2 flex flex-row gap-1 overflow-x-auto scrollbar-thin shrink-0';
+        btn.textContent = '🖥️ العودة لعرض موقع الويب الكامل';
+        showToast('تم التبديل إلى وضع تطبيق الجوال (Mobile App View)');
+      } else {
+        wrapper.className = 'flex-1 flex flex-col lg:flex-row overflow-hidden transition-all duration-300';
+        sidebar.className = 'w-full lg:w-64 bg-slate-900 border-b lg:border-b-0 lg:border-l border-slate-800 p-2 flex lg:flex-col gap-1 overflow-x-auto scrollbar-thin shrink-0';
+        btn.textContent = '📱 عرض شاشة الجوال / 🖥️ عرض الويب';
+        showToast('تم التبديل إلى وضع موقع الويب الكامل (Full Web ERP View)');
+      }
+    }
+
+    function changeBranch(val) {
+      state.branchId = val;
+      showToast('تم تبديل سياق الفرع النشط وتحديث التسعير والمستودع المرتبط');
+      renderAll();
+    }
+
+    function changeRole(val) {
+      state.role = val;
+      showToast('تم تطبيق صلاحيات الدور الوظيفي (RBAC): ' + val);
+      renderAll();
+    }
+
+    function selectSection(id) {
+      state.activeSection = id;
+      renderAll();
+    }
+
+    function renderSidebar() {
+      const nav = document.getElementById('sidebar-nav');
+      nav.innerHTML = sections.map(s => {
+        const active = state.activeSection === s.id;
+        return `
+          <button onclick="selectSection('${s.id}')"
+            class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition text-right w-full ${
+              active
+                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }">
+            <span class="text-base">${s.icon}</span>
+            <span>${state.lang === 'ar' ? s.ar : s.en}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function addToCart(prodId) {
+      const p = state.products.find(x => x.id === prodId);
+      if (!p) return;
+      const existing = state.cart.find(x => x.id === prodId);
+      if (existing) existing.qty += 1;
+      else state.cart.push({ id: p.id, nameAr: p.nameAr, nameEn: p.nameEn, price: p.price, qty: 1, station: p.station, mods: 'تحضير قياسي' });
+      showToast(`أضيف إلى السلة: ${p.nameAr}`);
+      renderMain();
+    }
+
+    function submitCentralOrder(sourceChannel) {
+      if (state.cart.length === 0) {
+        showToast('السلة فارغة — أضف أصنافاً أولاً');
+        return;
+      }
+      const subtotal = state.cart.reduce((s, i) => s + i.price * i.qty, 0);
+      const total = +(subtotal * 1.10).toFixed(2);
+      const newOrdId = 'ORD-' + (1045 + state.orders.length);
+
+      state.orders.unshift({
+        id: newOrdId,
+        type: state.selectedOrderType,
+        channel: sourceChannel,
+        table: state.selectedOrderType === 'DINE_IN' ? 'T-01' : '-',
+        customer: sourceChannel === 'CUSTOMER_APP' ? 'طارق المنصور (تطبيق العميل)' : (state.selectedOrderType === 'DINE_IN' ? 'طاولة T-01' : 'عميل نقطة البيع'),
+        total,
+        status: 'PREPARING',
+        paid: state.offlineMode ? 'QUEUED_OFFLINE' : 'PAID',
+        time: 'الآن'
+      });
+
+      const stationsMap = {};
+      state.cart.forEach(item => {
+        if (!stationsMap[item.station]) stationsMap[item.station] = [];
+        stationsMap[item.station].push(`${item.qty}x ${item.nameAr}`);
+      });
+      Object.entries(stationsMap).forEach(([st, items]) => {
+        state.kdsTickets.unshift({
+          id: 'KDS-' + Math.floor(100 + Math.random() * 899),
+          orderId: newOrdId,
+          type: `${state.selectedOrderType} (${sourceChannel})`,
+          station: st,
+          stationAr: `محطة ${st}`,
+          items,
+          status: 'NEW',
+          elapsed: 0,
+          sla: 12
+        });
+      });
+
+      state.inventoryLedger.unshift({
+        ref: `SALE-${newOrdId}`,
+        type: 'خصم وصفات مبيعات آلي (SALE_CONSUMPTION)',
+        item: 'شرائح لحم بلاك أنجوس + خبز بريوش',
+        wh: 'مستودع المطبخ الساخن',
+        delta: '-0.36 kg',
+        after: '144.64 kg',
+        by: `OrderEngine (${sourceChannel})`
+      });
+
+      state.journals.unshift({
+        num: 'JE-2026-0' + (413 + state.journals.length),
+        doc: `ORDER #${newOrdId}`,
+        desc: `قيد مبيعات وضريبة وتكلفة وصفات آلي (${sourceChannel})`,
+        debit: total,
+        credit: total,
+        lines: [
+          `مدين 1010 النقدية/البطاقات: $${total} | دائن 4100 إيرادات المبيعات: $${subtotal.toFixed(2)} | دائن 2100 ضريبة القيمة المضافة: $${(total - subtotal).toFixed(2)}`,
+          `مدين 5100 تكلفة البضاعة المباعة (COGS): $${(subtotal * 0.28).toFixed(2)} | دائن 1300 مخزون المواد الغذائية: $${(subtotal * 0.28).toFixed(2)}`
+        ]
+      });
+
+      state.cart = [];
+      showToast(`✅ تم إنشاء الطلب ${newOrdId} وتوجيهه للمطبخ وخصم المخزون وإنشاء القيد المحاسبي آلياً!`);
+      renderMain();
+    }
+
+    function advanceKdsTicket(ticketId) {
+      const t = state.kdsTickets.find(x => x.id === ticketId);
+      if (!t) return;
+      const flow = ['NEW', 'ACCEPTED', 'PREPARING', 'READY', 'COMPLETED'];
+      const idx = flow.indexOf(t.status);
+      if (idx < flow.length - 1) {
+        t.status = flow[idx + 1];
+        showToast(`تم تحديث تذكرة المطبخ ${t.id} إلى ${t.status}`);
+        renderMain();
+      }
+    }
+
+    function cycleTableStatus(tableId) {
+      const t = state.tables.find(x => x.id === tableId);
+      if (!t) return;
+      const states = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'WAITING_PAYMENT', 'CLEANING', 'UNAVAILABLE'];
+      t.status = states[(states.indexOf(t.status) + 1) % states.length];
+      showToast(`تم تحديث حالة الطاولة ${t.num} إلى ${t.status}`);
+      renderMain();
+    }
+
+    function advanceDelivery(delId) {
+      const d = state.deliveries.find(x => x.id === delId);
+      if (!d) return;
+      const flow = ['AWAITING_DRIVER', 'ASSIGNED', 'ACCEPTED', 'ARRIVED_RESTAURANT', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED'];
+      const idx = flow.indexOf(d.status);
+      if (idx < flow.length - 1) {
+        d.status = flow[idx + 1];
+        showToast(`تحديث حالة التوصيل ${d.orderId} إلى ${d.status} (OTP: ${d.otp})`);
+        renderMain();
+      }
+    }
+
+    function renderDashboard() {
+      const totalSales = state.orders.reduce((s, o) => s + o.total, 0);
+      const openTables = state.tables.filter(t => t.status === 'OCCUPIED' || t.status === 'WAITING_PAYMENT').length;
+      const activeKds = state.kdsTickets.filter(k => k.status !== 'COMPLETED').length;
+      const lowStock = state.stockItems.filter(s => s.low).length;
+      return `
+        <div class="space-y-6">
+          <div class="bg-gradient-to-l from-amber-500/20 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 class="text-xl md:text-2xl font-extrabold text-white">لوحة القيادة التنفيذية الموحدة (Web & Mobile ERP)</h2>
+              <p class="text-xs md:text-sm text-slate-300 mt-1">جميع الأنظمة متصلة بمحرك الطلبات المركزي (Central Order Engine) والمخزون والمحاسبة اللحظية</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="selectSection('pos')" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow">+ طلب جديد من الكاشير (POS)</button>
+              <button onclick="selectSection('kds')" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs">شاشة المطبخ (${activeKds})</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl"><p class="text-xs text-slate-400">إجمالي المبيعات</p><p class="text-xl font-extrabold text-emerald-400 mt-1">$${totalSales.toFixed(2)}</p></div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl"><p class="text-xs text-slate-400">الطلبات النشطة</p><p class="text-xl font-extrabold text-white mt-1">${state.orders.length} طلبات</p></div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl"><p class="text-xs text-slate-400">الطاولات المشغولة</p><p class="text-xl font-extrabold text-sky-400 mt-1">${openTables} / ${state.tables.length}</p></div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl"><p class="text-xs text-slate-400">طابور المطبخ (KDS)</p><p class="text-xl font-extrabold text-amber-400 mt-1">${activeKds} تذاكر</p></div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl"><p class="text-xs text-slate-400">نواقص المخزون</p><p class="text-xl font-extrabold text-rose-400 mt-1">${lowStock} أصناف</p></div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl"><p class="text-xs text-slate-400">صافي الربح الموثق</p><p class="text-xl font-extrabold text-emerald-400 mt-1">$6,420.00</p></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPos() {
+      const subtotal = state.cart.reduce((s, i) => s + i.price * i.qty, 0);
+      const vat = +(subtotal * 0.10).toFixed(2);
+      const total = +(subtotal + vat).toFixed(2);
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            ${state.products.map(p => `
+              <div onclick="addToCart('${p.id}')" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-2xl p-4 cursor-pointer">
+                <div class="flex justify-between"><span class="text-[10px] text-slate-400">${p.sku}</span><span class="text-xs font-bold text-emerald-400">$${p.price.toFixed(2)}</span></div>
+                <h3 class="font-bold text-sm text-white mt-2">${p.nameAr}</h3>
+                <p class="text-xs text-slate-400">${p.nameEn}</p>
+              </div>
+            `).join('')}
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <h3 class="font-bold text-base text-white">سلة الطلب ($${total.toFixed(2)})</h3>
+            <button onclick="submitCentralOrder('POS')" class="w-full py-3 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-sm">✅ إتمام الدفع وإرسال للمطبخ</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMain() {
+      const main = document.getElementById('main-content');
+      const map = { dashboard: renderDashboard, pos: renderPos };
+      main.innerHTML = (map[state.activeSection] || renderDashboard)();
+    }
+
+    function renderAll() {
+      renderSidebar();
+      renderMain();
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>

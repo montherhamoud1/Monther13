@@ -14,6 +14,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // RestoOps Enterprise - Phases 1 to 12 Build
         setContent {
             AppShell(viewModel = shellViewModel)
         }

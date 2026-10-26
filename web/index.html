@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RestoOps Enterprise ERP & POS — جميع المراحل 1 إلى 12</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Cairo', 'Inter', sans-serif; }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- Top Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 font-extrabold text-xl shadow">R</div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base md:text-lg text-white" id="hdr-title">RestoOps Enterprise ERP & POS</h1>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">Phases 1–12 Live</span>
+        </div>
+        <p class="text-xs text-slate-400" id="hdr-subtitle">مجموعة الحياة للضيافة • فرع وسط المدينة الرئيسي (DOWNTOWN-HQ)</p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Branch Selector -->
+      <select id="branch-select" onchange="changeBranch(this.value)" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200">
+        <option value="branch_01">فرع وسط المدينة الرئيسي (Downtown HQ)</option>
+        <option value="branch_02">فرع المرسى بوليفارد (Marina Boulevard)</option>
+        <option value="branch_03">فرع المطار السريع (Airport Express)</option>
+      </select>
+
+      <!-- Active Role Switcher (RBAC) -->
+      <select id="role-select" onchange="changeRole(this.value)" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-amber-300 font-semibold">
+        <option value="ROLE_ADMIN">الدور: المدير العام (Full Admin)</option>
+        <option value="ROLE_MANAGER">الدور: مدير الفرع (Branch Manager)</option>
+        <option value="ROLE_CASHIER">الدور: الكاشير (POS Cashier)</option>
+        <option value="ROLE_WAITER">الدور: النادل (Waiter)</option>
+        <option value="ROLE_CHEF">الدور: الشيف (Kitchen KDS)</option>
+      </select>
+
+      <!-- Viewport Mode Toggle (Web vs Mobile) -->
+      <button onclick="toggleViewportMode()" id="viewport-btn" class="px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/40 text-xs font-bold text-indigo-300">
+        📱 عرض شاشة الجوال / 🖥️ عرض الويب
+      </button>
+
+      <!-- Language Toggle -->
+      <button onclick="toggleLang()" id="lang-btn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-amber-400">
+        EN / عربي
+      </button>
+
+      <!-- Download Android APK Button -->
+      <a href="/download/RestoOps-Enterprise.apk" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow">
+        <span>📲 تحميل تطبيق الجوال (APK)</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div id="app-viewport-wrapper" class="flex-1 flex flex-col lg:flex-row overflow-hidden transition-all duration-300">
+    <!-- Sidebar Navigation (All 12 Phases) -->
+    <aside class="w-full lg:w-64 bg-slate-900 border-b lg:border-b-0 lg:border-l border-slate-800 p-2 flex lg:flex-col gap-1 overflow-x-auto scrollbar-thin shrink-0" id="sidebar-nav">
+    </aside>
+
+    <!-- Dynamic Content Area -->
+    <main class="flex-1 p-4 md:p-6 overflow-y-auto space-y-6" id="main-content">
+    </main>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 left-5 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-sm font-semibold hidden z-50 border border-emerald-400/40"></div>
+
+  <script>
+    // --- Central Enterprise State across Phases 1 to 12 ---
+    const state = {
+      lang: 'ar',
+      branchId: 'branch_01',
+      role: 'ROLE_ADMIN',
+      activeSection: 'dashboard',
+      posTab: 'catalog',
+      tablesTab: 'map',
+      kdsStation: 'ALL',
+      customerTab: 'menu',
+      deliveryTab: 'dispatch',
+      inventoryTab: 'stock',
+      accountingTab: 'statements',
+      hrTab: 'attendance',
+      reportsTab: 'drilldown',
+      selectedReportDomain: 'Sales',
+      offlineMode: false,
+      offlineQueue: [],
+      cart: [
+        { id: 'p1', nameAr: 'برجر أنجوس بالكمأة', nameEn: 'Truffle Angus Burger', price: 18.50, qty: 2, station: 'GRILL', mods: 'جبن شيدر معتق + صوص كمأة' },
+        { id: 'p4', nameAr: 'بطاطس بالأعشاب والبارميزان', nameEn: 'Parmesan Herb Fries', price: 7.50, qty: 1, station: 'FRYER', mods: 'مقرمش إضافي' }
+      ],
+      selectedOrderType: 'DINE_IN',
+      selectedTableId: 't2',
+      couponCode: 'WELCOME10',
+      products: [
+        { id: 'p1', sku: 'BUR-001', cat: 'برجر مشوي', nameAr: 'برجر أنجوس بالكمأة', nameEn: 'Truffle Angus Burger', price: 18.50, cost: 5.40, station: 'GRILL', stock: 84 },
+        { id: 'p2', sku: 'BUR-002', cat: 'برجر مشوي', nameAr: 'برجر واغيو مدخن مزدوج', nameEn: 'Double Smoked Wagyu Burger', price: 22.00, cost: 6.80, station: 'GRILL', stock: 62 },
+        { id: 'p10', sku: 'PIZ-001', cat: 'بيتزا على الحطب', nameAr: 'بيتزا بوراتا والكمأة على الحطب', nameEn: 'Woodfire Truffle Burrata Pizza', price: 24.00, cost: 6.10, station: 'PIZZA', stock: 45 },
+        { id: 'p4', sku: 'SID-001', cat: 'مقبلات ومقليات', nameAr: 'بطاطس بالأعشاب والبارميزان', nameEn: 'Parmesan Herb Fries', price: 7.50, cost: 1.85, station: 'FRYER', stock: 140 },
+        { id: 'p6', sku: 'DRK-001', cat: 'مشروبات طازجة', nameAr: 'موهيتو باشن فروت', nameEn: 'Passionfruit Mojito', price: 6.50, cost: 1.20, station: 'DRINKS', stock: 110 },
+        { id: 'p8', sku: 'DES-001', cat: 'حلويات', nameAr: 'كيكة التمر الدافئة مع الجيلاتو', nameEn: 'Warm Sticky Date Pudding', price: 11.00, cost: 2.90, station: 'DESSERT', stock: 38 }
+      ],
+      tables: [
+        { id: 't1', num: 'T-01', floor: 'الطابق الأرضي', zone: 'الصالة الرئيسية', seats: 2, status: 'AVAILABLE', qrToken: 'QR-SIG-9F4A2C81E0', orderId: null, waiter: 'سارة نادر' },
+        { id: 't2', num: 'T-02', floor: 'الطابق الأرضي', zone: 'الصالة الرئيسية', seats: 4, status: 'OCCUPIED', qrToken: 'QR-SIG-3B8D1E74A2', orderId: 'ORD-1041', waiter: 'سارة نادر' },
+        { id: 't3', num: 'T-03', floor: 'الطابق الأرضي', zone: 'الصالة الرئيسية', seats: 4, status: 'AVAILABLE', qrToken: 'QR-SIG-7C2E9A11F5', orderId: null, waiter: 'سارة نادر' },
+        { id: 't4', num: 'T-04', floor: 'الطابق الأرضي', zone: 'ركن العائلات VIP', seats: 6, status: 'WAITING_PAYMENT', qrToken: 'QR-SIG-5D1F8B39C4', orderId: 'ORD-1042', waiter: 'أحمد منصور' },
+        { id: 't5', num: 'T-05', floor: 'التراس الخارجي', zone: 'تراس الحديقة', seats: 4, status: 'RESERVED', qrToken: 'QR-SIG-2A6C4E90B8', orderId: null, waiter: 'أحمد منصور' },
+        { id: 't6', num: 'T-06', floor: 'التراس الخارجي', zone: 'تراس الحديقة', seats: 8, status: 'CLEANING', qrToken: 'QR-SIG-8E3A7D22C1', orderId: null, waiter: 'سارة نادر' }
+      ],
+      reservations: [
+        { id: 'res_01', code: 'RSV-8821', customer: 'فيصل العتيبي', phone: '+966 50 321 8890', table: 'T-05', time: '20:30', pax: 4, status: 'CONFIRMED', notes: 'طاولة في التراس - مناسبة خاصة' },
+        { id: 'res_02', code: 'RSV-8822', customer: 'نورة القحطاني', phone: '+966 55 901 4412', table: 'T-04', time: '21:00', pax: 6, status: 'SEATED', notes: 'كرسي أطفال إضافي' }
+      ],
+      orders: [
+        { id: 'ORD-1041', type: 'DINE_IN', channel: 'WAITER_APP', table: 'T-02', customer: 'طاولة T-02 (خالد السعيد)', total: 48.95, status: 'PREPARING', paid: 'UNPAID', time: 'منذ 8 د' },
+        { id: 'ORD-1042', type: 'DINE_IN', channel: 'QR_TABLE', table: 'T-04', customer: 'طاولة T-04 (ليلى الحربي - QR)', total: 74.80, status: 'READY', paid: 'PAID', time: 'منذ 16 د' },
+        { id: 'ORD-1043', type: 'DELIVERY', channel: 'CUSTOMER_APP', table: '-', customer: 'طارق المنصور', total: 52.40, status: 'OUT_FOR_DELIVERY', paid: 'COD', time: 'منذ 19 د' },
+        { id: 'ORD-1044', type: 'TAKEOUT', channel: 'POS', table: '-', customer: 'عميل كاشير سريع', total: 28.60, status: 'COMPLETED', paid: 'PAID', time: 'منذ 32 د' }
+      ],
+      kdsTickets: [
+        { id: 'KDS-901', orderId: 'ORD-1041', type: 'DINE_IN (T-02)', station: 'GRILL', stationAr: 'محطة الشواية (Grill)', items: ['2x برجر أنجوس بالكمأة (Medium Well)', '1x برجر واغيو مدخن'], status: 'PREPARING', elapsed: 9, sla: 12 },
+        { id: 'KDS-902', orderId: 'ORD-1041', type: 'DINE_IN (T-02)', station: 'FRYER', stationAr: 'محطة القلاية (Fryer)', items: ['2x بطاطس بالأعشاب والبارميزان'], status: 'READY', elapsed: 6, sla: 8 },
+        { id: 'KDS-903', orderId: 'ORD-1042', type: 'QR_TABLE (T-04)', station: 'PIZZA', stationAr: 'محطة البيتزا (Pizza Oven)', items: ['2x بيتزا بوراتا والكمأة على الحطب'], status: 'NEW', elapsed: 14, sla: 12 },
+        { id: 'KDS-904', orderId: 'ORD-1043', type: 'DELIVERY', station: 'PACKING', stationAr: 'محطة التغليف والتجميع (Expediter)', items: ['2x برجر أنجوس بالكمأة', '2x موهيتو باشن فروت'], status: 'READY', elapsed: 4, sla: 10 }
+      ],
+      customers: [
+        { id: 'c1', name: 'طارق المنصور', phone: '+966 55 888 9999', tier: 'GOLD', points: 1420, orders: 14, spend: 685.50, address: 'حي العليا، طريق الملك فهد، فيلا 14' },
+        { id: 'c2', name: 'ليلى الحربي', phone: '+966 50 442 1180', tier: 'PLATINUM', points: 2890, orders: 26, spend: 1340.00, address: 'حي النخيل، شارع التخصصي، مبنى 8' },
+        { id: 'c3', name: 'سلطان الدوسري', phone: '+966 54 119 7732', tier: 'SILVER', points: 640, orders: 6, spend: 245.00, address: 'حي الملقا، بوليفارد الرياض' }
+      ],
+      deliveries: [
+        { id: 'DEL-501', orderId: 'ORD-1043', customer: 'طارق المنصور', address: 'حي العليا، فيلا 14', zone: 'نطاق العليا (4.50$)', driver: 'فهد الشمري', status: 'ON_ROUTE', otp: '4829', total: 52.40, cod: true, elapsed: 19 },
+        { id: 'DEL-502', orderId: 'ORD-1045', customer: 'سلطان الدوسري', address: 'حي الملقا، بوليفارد', zone: 'نطاق شمال الرياض (6.00$)', driver: 'ياسر الحربي', status: 'ASSIGNED', otp: '9104', total: 39.00, cod: false, elapsed: 7 }
+      ],
+      drivers: [
+        { id: 'drv_01', name: 'فهد الشمري', phone: '+966 56 112 3344', vehicle: 'Toyota Hilux • أ ب ج 4821', shift: 'ONLINE', gpsConsent: true, lat: 24.7136, lng: 46.6753, codUnsettled: 142.80, completed: 9 },
+        { id: 'drv_02', name: 'ياسر الحربي', phone: '+966 56 998 1122', vehicle: 'Honda Bike • د هـ و 1092', shift: 'ONLINE', gpsConsent: true, lat: 24.7420, lng: 46.6510, codUnsettled: 54.00, completed: 6 }
+      ],
+      stockItems: [
+        { id: 'stk_1', code: 'ING-BEEF-01', nameAr: 'شرائح لحم بلاك أنجوس مبرد', warehouse: 'المستودع المركزي المبرد (Central)', qty: 145.0, unit: 'kg', reorder: 40.0, cost: 12.50, low: false },
+        { id: 'stk_2', code: 'ING-TRUF-02', nameAr: 'معجون وزيت الكمأة الإيطالي', warehouse: 'مستودع المطبخ الساخن (Kitchen)', qty: 6.5, unit: 'L', reorder: 10.0, cost: 28.00, low: true },
+        { id: 'stk_3', code: 'ING-BURR-03', nameAr: 'جبنة بوراتا طازجة', warehouse: 'مستودع الفرع الرئيسي (Branch)', qty: 8.0, unit: 'kg', reorder: 12.0, cost: 16.00, low: true },
+        { id: 'stk_4', code: 'ING-FRY-04', nameAr: 'بطاطس بلجيكية فاخرة', warehouse: 'المستودع المركزي المبرد (Central)', qty: 320.0, unit: 'kg', reorder: 80.0, cost: 2.40, low: false }
+      ],
+      inventoryLedger: [
+        { ref: 'SALE-ORD-1041', type: 'خصم وصفات مبيعات (SALE_CONSUMPTION)', item: 'شرائح لحم بلاك أنجوس مبرد', wh: 'مستودع المطبخ الساخن', delta: '-0.54 kg', after: '145.0 kg', by: 'OrderEngine Auto' },
+        { ref: 'GRN-PO-801', type: 'توريد مشتريات (PURCHASE_RECEIPT)', item: 'بطاطس بلجيكية فاخرة', wh: 'المستودع المركزي المبرد', delta: '+100.0 kg', after: '320.0 kg', by: 'كريم منصور' },
+        { ref: 'TRF-2026-104', type: 'تحويل مخزني (TRANSFER)', item: 'جبنة بوراتا طازجة', wh: 'المركزي ➔ المطبخ', delta: '+10.0 kg', after: '18.0 kg', by: 'طارق الشيف' },
+        { ref: 'WST-309', type: 'تسجيل هدر وتوالف (WASTE)', item: 'معجون الكمأة الإيطالي', wh: 'مستودع المطبخ الساخن', delta: '-0.5 L', after: '6.5 L', by: 'كريم منصور' }
+      ],
+      journals: [
+        { num: 'JE-2026-0412', doc: 'ORDER #ORD-1042', desc: 'قيد مبيعات وضريبة وتكلفة بضاعة مباعة (Auto POS/QR Sale & COGS)', debit: 93.40, credit: 93.40, lines: [
+          'مدين 1010 صندوق النقدية والبطاقات: $74.80 | دائن 4100 إيرادات المبيعات: $68.00 | دائن 2100 ضريبة القيمة المضافة: $6.80',
+          'مدين 5100 تكلفة البضاعة المباعة (COGS): $18.60 | دائن 1300 مخزون المواد الغذائية: $18.60'
+        ]},
+        { num: 'JE-2026-0411', doc: 'PO-INV #PO-801', desc: 'قيد فاتورة توريد مشتريات مواد غذائية (Supplier Invoice)', debit: 1450.00, credit: 1450.00, lines: [
+          'مدين 1300 مخزون المواد الغذائية: $1,318.18 | مدين 2100 ضريبة مدخلات: $131.82 | دائن 2010 ذمم الموردين (AP): $1,450.00'
+        ]},
+        { num: 'JE-2026-0410', doc: 'EXP #EXP-1088', desc: 'قيد مصروفات تشغيلية وكهرباء الفرع الرئيسي', debit: 605.00, credit: 605.00, lines: [
+          'مدين 6200 مصروفات المرافق والكهرباء: $605.00 | دائن 1020 البنك الأهلي (الحساب الجاري): $605.00'
+        ]}
+      ],
+      employees: [
+        { code: 'EMP-01', name: 'ميرة حمود', dept: 'الإدارة العليا', role: 'مدير تنفيذي للعمليات', source: 'بصمة الوجه والكاميرا (TERMINAL_CAMERA)', status: 'PRESENT', checkIn: '08:02', salary: 4800, payStatus: 'PAID' },
+        { code: 'EMP-02', name: 'كريم منصور', dept: 'إدارة الفروع', role: 'مدير الفرع الرئيسي', source: 'جهاز البصمة الشبكي (FINGERPRINT_API)', status: 'PRESENT', checkIn: '08:45', salary: 3600, payStatus: 'PAID' },
+        { code: 'EMP-03', name: 'عمر طارق', dept: 'نقاط البيع POS', role: 'كاشير أول', source: 'بطاقة الكاشير + الكاميرا', status: 'PRESENT', checkIn: '09:00', salary: 2200, payStatus: 'APPROVED' },
+        { code: 'EMP-04', name: 'سارة نادر', dept: 'خدمة الطاولات', role: 'مشرفة صالة ونادلة', source: 'تحقق الجوال الجغرافي (MOBILE_GPS)', status: 'PRESENT', checkIn: '11:55', salary: 2100, payStatus: 'APPROVED' },
+        { code: 'EMP-05', name: 'الشيف طارق العلي', dept: 'المطبخ الساخن', role: 'كبير الطهاة (Head Chef)', source: 'جهاز البصمة الشبكي (FINGERPRINT_API)', status: 'PRESENT', checkIn: '09:30', salary: 3400, payStatus: 'PAID' }
+      ],
+      aiQuery: 'ما هي مبيعات اليوم والأصناف منخفضة المخزون والطلبات المتأخرة؟',
+      aiAnswer: 'إجمالي المبيعات النشطة: $204.75 عبر 4 طلبات (متوسط الطلب $51.19) • الأصناف تحت حد إعادة الطلب (2): معجون الكمأة الإيطالي (6.5 L)، جبنة بوراتا طازجة (8.0 kg) • صافي الربح الدفتري الموثق بالقيود: $6,420.00 (ميزان المراجعة متوازن 100%).'
+    };
+
+    const sections = [
+      { id: 'dashboard', icon: '📊', ar: '1. لوحة القيادة التنفيذية', en: '1. Executive Dashboard' },
+      { id: 'pos', icon: '🖥️', ar: '2. نقطة البيع الكاشير (POS)', en: '2. POS Terminal & Shifts' },
+      { id: 'tables', icon: '🍽️', ar: '3. الطاولات وQR والنادل والحجوزات', en: '3. Smart Tables, QR & Waiter' },
+      { id: 'kds', icon: '👨‍🍳', ar: '4. شاشة المطبخ اللحظية (KDS)', en: '4. Kitchen Display (KDS)' },
+      { id: 'customer', icon: '📱', ar: '5. تطبيق العميل والولاء وCRM', en: '5. Customer Portal & CRM' },
+      { id: 'delivery', icon: '🛵', ar: '6. إدارة التوصيل والسائقين', en: '6. Delivery & Driver Fleet' },
+      { id: 'inventory', icon: '📦', ar: '7. المخزون والمستودعات والمشتريات', en: '7. Inventory & Procurement' },
+      { id: 'accounting', icon: '🏦', ar: '8. المحاسبة والقيود والمالية', en: '8. Financial Accounting' },
+      { id: 'hr', icon: '👥', ar: '9. الموارد البشرية والحضور والرواتب', en: '9. HR, Attendance & Payroll' },
+      { id: 'menu', icon: '🍔', ar: '10. هندسة المنيو وتكلفة الوصفات', en: '10. Menu & Recipe Costing' },
+      { id: 'admin', icon: '🔐', ar: '11. الإدارة والفروع والصلاحيات RBAC', en: '11. Enterprise Admin & RBAC' },
+      { id: 'reports', icon: '📈', ar: '12. التقارير والتحليلات والذكاء الاصطناعي', en: '12. Reports, BI & AI Query' }
+    ];
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 3200);
+    }
+
+    function toggleLang() {
+      state.lang = state.lang === 'ar' ? 'en' : 'ar';
+      document.documentElement.lang = state.lang;
+      document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+      renderAll();
+    }
+
+    function toggleViewportMode() {
+      state.mobileFrame = !state.mobileFrame;
+      const wrapper = document.getElementById('app-viewport-wrapper');
+      const sidebar = document.getElementById('sidebar-nav');
+      const btn = document.getElementById('viewport-btn');
+      if (state.mobileFrame) {
+        wrapper.className = 'max-w-[430px] w-full mx-auto my-4 border-[6px] border-slate-700 rounded-[36px] shadow-2xl bg-slate-950 flex flex-col overflow-hidden h-[840px]';
+        sidebar.className = 'w-full bg-slate-900 border-b border-slate-800 p-2 flex flex-row gap-1 overflow-x-auto scrollbar-thin shrink-0';
+        btn.textContent = '🖥️ العودة لعرض موقع الويب الكامل';
+        showToast('تم التبديل إلى وضع تطبيق الجوال (Mobile App View)');
+      } else {
+        wrapper.className = 'flex-1 flex flex-col lg:flex-row overflow-hidden transition-all duration-300';
+        sidebar.className = 'w-full lg:w-64 bg-slate-900 border-b lg:border-b-0 lg:border-l border-slate-800 p-2 flex lg:flex-col gap-1 overflow-x-auto scrollbar-thin shrink-0';
+        btn.textContent = '📱 عرض شاشة الجوال / 🖥️ عرض الويب';
+        showToast('تم التبديل إلى وضع موقع الويب الكامل (Full Web ERP View)');
+      }
+    }
+
+    function changeBranch(val) {
+      state.branchId = val;
+      showToast('تم تبديل سياق الفرع النشط وتحديث التسعير والمستودع المرتبط');
+      renderAll();
+    }
+
+    function changeRole(val) {
+      state.role = val;
+      showToast('تم تطبيق صلاحيات الدور الوظيفي (RBAC): ' + val);
+      renderAll();
+    }
+
+    function selectSection(id) {
+      state.activeSection = id;
+      renderAll();
+    }
+
+    function renderSidebar() {
+      const nav = document.getElementById('sidebar-nav');
+      nav.innerHTML = sections.map(s => {
+        const active = state.activeSection === s.id;
+        return `
+          <button onclick="selectSection('${s.id}')"
+            class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition text-right w-full ${
+              active
+                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }">
+            <span class="text-base">${s.icon}</span>
+            <span>${state.lang === 'ar' ? s.ar : s.en}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    // --- Core Interactive Actions Connected to Central Order Engine ---
+    function addToCart(prodId) {
+      const p = state.products.find(x => x.id === prodId);
+      if (!p) return;
+      const existing = state.cart.find(x => x.id === prodId);
+      if (existing) existing.qty += 1;
+      else state.cart.push({ id: p.id, nameAr: p.nameAr, nameEn: p.nameEn, price: p.price, qty: 1, station: p.station, mods: 'تحضير قياسي' });
+      showToast(`أضيف إلى السلة: ${p.nameAr}`);
+      renderMain();
+    }
+
+    function submitCentralOrder(sourceChannel) {
+      if (state.cart.length === 0) {
+        showToast('السلة فارغة — أضف أصنافاً أولاً');
+        return;
+      }
+      const subtotal = state.cart.reduce((s, i) => s + i.price * i.qty, 0);
+      const total = +(subtotal * 1.10).toFixed(2);
+      const newOrdId = 'ORD-' + (1045 + state.orders.length);
+
+      // 1. Insert into Central Order Engine
+      state.orders.unshift({
+        id: newOrdId,
+        type: state.selectedOrderType,
+        channel: sourceChannel,
+        table: state.selectedOrderType === 'DINE_IN' ? 'T-01' : '-',
+        customer: sourceChannel === 'CUSTOMER_APP' ? 'طارق المنصور (تطبيق العميل)' : (state.selectedOrderType === 'DINE_IN' ? 'طاولة T-01' : 'عميل نقطة البيع'),
+        total,
+        status: 'PREPARING',
+        paid: state.offlineMode ? 'QUEUED_OFFLINE' : 'PAID',
+        time: 'الآن'
+      });
+
+      // 2. Route automatically to KDS Stations (Phase 6)
+      const stationsMap = {};
+      state.cart.forEach(item => {
+        if (!stationsMap[item.station]) stationsMap[item.station] = [];
+        stationsMap[item.station].push(`${item.qty}x ${item.nameAr}`);
+      });
+      Object.entries(stationsMap).forEach(([st, items]) => {
+        state.kdsTickets.unshift({
+          id: 'KDS-' + Math.floor(100 + Math.random() * 899),
+          orderId: newOrdId,
+          type: `${state.selectedOrderType} (${sourceChannel})`,
+          station: st,
+          stationAr: `محطة ${st}`,
+          items,
+          status: 'NEW',
+          elapsed: 0,
+          sla: 12
+        });
+      });
+
+      // 3. Deduct Recipe Inventory automatically (Phase 9)
+      state.inventoryLedger.unshift({
+        ref: `SALE-${newOrdId}`,
+        type: 'خصم وصفات مبيعات آلي (SALE_CONSUMPTION)',
+        item: 'شرائح لحم بلاك أنجوس + خبز بريوش',
+        wh: 'مستودع المطبخ الساخن',
+        delta: '-0.36 kg',
+        after: '144.64 kg',
+        by: `OrderEngine (${sourceChannel})`
+      });
+
+      // 4. Generate Balanced Double-Entry Accounting Journal (Phase 10)
+      state.journals.unshift({
+        num: 'JE-2026-0' + (413 + state.journals.length),
+        doc: `ORDER #${newOrdId}`,
+        desc: `قيد مبيعات وضريبة وتكلفة وصفات آلي (${sourceChannel})`,
+        debit: total,
+        credit: total,
+        lines: [
+          `مدين 1010 النقدية/البطاقات: $${total} | دائن 4100 إيرادات المبيعات: $${subtotal.toFixed(2)} | دائن 2100 ضريبة القيمة المضافة: $${(total - subtotal).toFixed(2)}`,
+          `مدين 5100 تكلفة البضاعة المباعة (COGS): $${(subtotal * 0.28).toFixed(2)} | دائن 1300 مخزون المواد الغذائية: $${(subtotal * 0.28).toFixed(2)}`
+        ]
+      });
+
+      // 5. If Delivery, spawn Delivery Dispatch Assignment (Phase 8)
+      if (state.selectedOrderType === 'DELIVERY' || sourceChannel === 'CUSTOMER_APP') {
+        state.deliveries.unshift({
+          id: 'DEL-' + (503 + state.deliveries.length),
+          orderId: newOrdId,
+          customer: 'طارق المنصور',
+          address: 'حي العليا، طريق الملك فهد',
+          zone: 'نطاق العليا (4.50$)',
+          driver: 'فهد الشمري',
+          status: 'AWAITING_DRIVER',
+          otp: String(Math.floor(1000 + Math.random() * 9000)),
+          total,
+          cod: true,
+          elapsed: 1
+        });
+      }
+
+      // 6. Update Table status if Dine-In (Phase 5)
+      if (state.selectedOrderType === 'DINE_IN') {
+        const t = state.tables.find(x => x.id === 't1');
+        if (t) { t.status = 'OCCUPIED'; t.orderId = newOrdId; }
+      }
+
+      state.cart = [];
+      showToast(`✅ تم إنشاء الطلب ${newOrdId} وتوجيهه للمطبخ وخصم المخزون وإنشاء القيد المحاسبي آلياً!`);
+      renderMain();
+    }
+
+    function advanceKdsTicket(ticketId) {
+      const t = state.kdsTickets.find(x => x.id === ticketId);
+      if (!t) return;
+      const flow = ['NEW', 'ACCEPTED', 'PREPARING', 'READY', 'COMPLETED'];
+      const idx = flow.indexOf(t.status);
+      if (idx < flow.length - 1) {
+        t.status = flow[idx + 1];
+        const ord = state.orders.find(o => o.id === t.orderId);
+        if (ord && t.status === 'READY') ord.status = 'READY';
+        if (ord && t.status === 'COMPLETED') ord.status = 'COMPLETED';
+        showToast(`تم تحديث تذكرة المطبخ ${t.id} إلى ${t.status}`);
+        renderMain();
+      }
+    }
+
+    function cycleTableStatus(tableId) {
+      const t = state.tables.find(x => x.id === tableId);
+      if (!t) return;
+      const states = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'WAITING_PAYMENT', 'CLEANING', 'UNAVAILABLE'];
+      t.status = states[(states.indexOf(t.status) + 1) % states.length];
+      showToast(`تم تحديث حالة الطاولة ${t.num} إلى ${t.status}`);
+      renderMain();
+    }
+
+    function advanceDelivery(delId) {
+      const d = state.deliveries.find(x => x.id === delId);
+      if (!d) return;
+      const flow = ['AWAITING_DRIVER', 'ASSIGNED', 'ACCEPTED', 'ARRIVED_RESTAURANT', 'PICKED_UP', 'ON_ROUTE', 'DELIVERED'];
+      const idx = flow.indexOf(d.status);
+      if (idx < flow.length - 1) {
+        d.status = flow[idx + 1];
+        if (d.status === 'DELIVERED') {
+          const ord = state.orders.find(o => o.id === d.orderId);
+          if (ord) { ord.status = 'COMPLETED'; ord.paid = 'PAID'; }
+        }
+        showToast(`تحديث حالة التوصيل ${d.orderId} إلى ${d.status} (OTP: ${d.otp})`);
+        renderMain();
+      }
+    }
+
+    // --- Section Renderers ---
+    function renderDashboard() {
+      const totalSales = state.orders.reduce((s, o) => s + o.total, 0);
+      const openTables = state.tables.filter(t => t.status === 'OCCUPIED' || t.status === 'WAITING_PAYMENT').length;
+      const activeKds = state.kdsTickets.filter(k => k.status !== 'COMPLETED').length;
+      const lowStock = state.stockItems.filter(s => s.low).length;
+
+      return `
+        <div class="space-y-6">
+          <div class="bg-gradient-to-l from-amber-500/20 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 class="text-xl md:text-2xl font-extrabold text-white">لوحة القيادة التنفيذية الموحدة (Phases 1–12 Command Center)</h2>
+              <p class="text-xs md:text-sm text-slate-300 mt-1">جميع الأنظمة متصلة بمحرك الطلبات المركزي (Central Order Engine) والمخزون والمحاسبة اللحظية</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="selectSection('pos')" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow">+ طلب جديد من الكاشير (POS)</button>
+              <button onclick="selectSection('kds')" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs">شاشة المطبخ (${activeKds})</button>
+            </div>
+          </div>
+
+          <!-- 12 Executive KPIs -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <p class="text-xs text-slate-400">إجمالي المبيعات</p>
+              <p class="text-xl font-extrabold text-emerald-400 mt-1">$${totalSales.toFixed(2)}</p>
+              <p class="text-[11px] text-slate-500 mt-1">+14.8% عن أمس</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <p class="text-xs text-slate-400">الطلبات النشطة</p>
+              <p class="text-xl font-extrabold text-white mt-1">${state.orders.length} طلبات</p>
+              <p class="text-[11px] text-amber-400 mt-1">متوسط الطلب $${(totalSales / state.orders.length).toFixed(2)}</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <p class="text-xs text-slate-400">الطاولات المشغولة</p>
+              <p class="text-xl font-extrabold text-sky-400 mt-1">${openTables} / ${state.tables.length}</p>
+              <p class="text-[11px] text-slate-500 mt-1">متصل بـ QR والنادل</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <p class="text-xs text-slate-400">طابور المطبخ (KDS)</p>
+              <p class="text-xl font-extrabold text-amber-400 mt-1">${activeKds} تذاكر</p>
+              <p class="text-[11px] text-slate-500 mt-1">توجيه آلي للمحطات</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <p class="text-xs text-slate-400">نواقص المخزون</p>
+              <p class="text-xl font-extrabold text-rose-400 mt-1">${lowStock} أصناف</p>
+              <p class="text-[11px] text-slate-500 mt-1">تحت حد إعادة الطلب</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <p class="text-xs text-slate-400">صافي الربح الموثق</p>
+              <p class="text-xl font-extrabold text-emerald-400 mt-1">$6,420.00</p>
+              <p class="text-[11px] text-slate-500 mt-1">قيود يومية متوازنة</p>
+            </div>
+          </div>
+
+          <!-- Quick Module Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div class="flex justify-between items-center">
+                <h3 class="font-bold text-sm text-amber-400">آخر الطلبات الموحدة (POS / QR / App / Waiter)</h3>
+                <button onclick="selectSection('pos')" class="text-xs text-sky-400 hover:underline">عرض الكل</button>
+              </div>
+              <div class="space-y-2">
+                ${state.orders.slice(0, 4).map(o => `
+                  <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
+                    <div>
+                      <span class="font-bold text-white">${o.id}</span> • <span class="text-slate-300">${o.customer}</span>
+                      <div class="text-[11px] text-slate-500">${o.type} • قناة: ${o.channel} • ${o.time}</div>
+                    </div>
+                    <div class="text-left">
+                      <div class="font-bold text-emerald-400">$${o.total.toFixed(2)}</div>
+                      <span class="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-amber-300">${o.status}</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div class="flex justify-between items-center">
+                <h3 class="font-bold text-sm text-amber-400">تذاكر المطبخ الحية (KDS Stations)</h3>
+                <button onclick="selectSection('kds')" class="text-xs text-sky-400 hover:underline">فتح شاشة المطبخ</button>
+              </div>
+              <div class="space-y-2">
+                ${state.kdsTickets.slice(0, 4).map(k => `
+                  <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
+                    <div>
+                      <span class="font-bold text-white">${k.orderId}</span> • <span class="text-amber-300">${k.stationAr}</span>
+                      <div class="text-[11px] text-slate-400">${k.items.join(' ، ')}</div>
+                    </div>
+                    <button onclick="advanceKdsTicket('${k.id}')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px]">
+                      ${k.status} ➔
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div class="flex justify-between items-center">
+                <h3 class="font-bold text-sm text-amber-400">آخر القيود المحاسبية وحركات المخزون</h3>
+                <button onclick="selectSection('accounting')" class="text-xs text-sky-400 hover:underline">دفتر الأستاذ</button>
+              </div>
+              <div class="space-y-2">
+                ${state.journals.slice(0, 3).map(j => `
+                  <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+                    <div class="flex justify-between font-bold">
+                      <span class="text-white">${j.num} (${j.doc})</span>
+                      <span class="text-emerald-400">$${j.debit.toFixed(2)}</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">${j.desc}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPos() {
+      const subtotal = state.cart.reduce((s, i) => s + i.price * i.qty, 0);
+      const vat = +(subtotal * 0.10).toFixed(2);
+      const total = +(subtotal + vat).toFixed(2);
+
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Products Catalog -->
+          <div class="lg:col-span-2 space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 class="text-lg font-bold text-white">نقطة البيع الكاشير ومحرك الطلبات المركزي (Phase 4 POS)</h2>
+                <p class="text-xs text-slate-400">الوردية مفتوحة (#SHF-101) • الكاشير: عمر طارق • النقد بالصندوق: $680.00</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="state.offlineMode = !state.offlineMode; renderMain();" class="px-3 py-1.5 rounded-xl text-xs font-bold border ${state.offlineMode ? 'bg-rose-500/20 border-rose-500 text-rose-300' : 'bg-emerald-500/20 border-emerald-500 text-emerald-300'}">
+                  ${state.offlineMode ? '⚡ وضع عدم الاتصال (Offline Queue)' : '🟢 متصل لحظياً (Online Sync)'}
+                </button>
+              </div>
+            </div>
+
+            <!-- Order Type Selector -->
+            <div class="flex flex-wrap gap-2">
+              ${[
+                ['DINE_IN', '🍽️ محلي (Dine-In)'],
+                ['TAKEOUT', '🛍️ سفري (Takeaway)'],
+                ['DELIVERY', '🛵 توصيل (Delivery)'],
+                ['PICKUP', '🏃 استلام من الفرع (Pickup)']
+              ].map(([code, label]) => `
+                <button onclick="state.selectedOrderType='${code}'; renderMain();"
+                  class="px-3.5 py-2 rounded-xl text-xs font-bold border ${state.selectedOrderType === code ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-900 text-slate-300 border-slate-800'}">
+                  ${label}
+                </button>
+              `).join('')}
+            </div>
+
+            <!-- Product Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              ${state.products.map(p => `
+                <div onclick="addToCart('${p.id}')" class="bg-slate-900 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between">
+                  <div>
+                    <div class="flex justify-between items-start gap-2">
+                      <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">${p.sku} • ${p.station}</span>
+                      <span class="text-xs font-bold text-emerald-400">$${p.price.toFixed(2)}</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-white mt-2">${p.nameAr}</h3>
+                    <p class="text-xs text-slate-400">${p.nameEn}</p>
+                  </div>
+                  <div class="mt-3 pt-2 border-t border-slate-800 flex justify-between items-center text-[11px] text-slate-400">
+                    <span>المخزون: ${p.stock}</span>
+                    <span class="text-amber-400 font-bold">+ إضافة للسلة</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Active Cart & Mixed Tender Checkout -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-4">
+            <div class="space-y-3">
+              <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-base text-white">سلة الطلب الحالية (${state.selectedOrderType})</h3>
+                <button onclick="state.cart=[]; renderMain();" class="text-xs text-rose-400 hover:underline">إفراغ السلة</button>
+              </div>
+
+              <div class="space-y-2 max-h-72 overflow-y-auto">
+                ${state.cart.length === 0 ? '<p class="text-xs text-slate-500 py-8 text-center">اضغط على أي صنف لإضافته إلى الفاتورة</p>' : state.cart.map(item => `
+                  <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
+                    <div>
+                      <div class="font-bold text-white">${item.qty}x ${item.nameAr}</div>
+                      <div class="text-[11px] text-slate-400">${item.mods} • محطة: ${item.station}</div>
+                    </div>
+                    <div class="font-bold text-emerald-400">$${(item.price * item.qty).toFixed(2)}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="space-y-3 border-t border-slate-800 pt-3 text-xs">
+              <div class="flex justify-between text-slate-300"><span>المجموع الفرعي:</span><span>$${subtotal.toFixed(2)}</span></div>
+              <div class="flex justify-between text-slate-300"><span>ضريبة القيمة المضافة (10%):</span><span>$${vat.toFixed(2)}</span></div>
+              <div class="flex justify-between text-base font-extrabold text-white pt-1 border-t border-slate-800">
+                <span>الإجمالي المستحق:</span><span class="text-emerald-400">$${total.toFixed(2)}</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-2">
+                <button onclick="submitCentralOrder('POS')" class="col-span-2 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm shadow-lg">
+                  ✅ إتمام الدفع وإرسال للمطبخ والمحاسبة ($${total.toFixed(2)})
+                </button>
+                <button onclick="showToast('تم تقسيم الفاتورة بالتساوي على 3 مقاعد ($' + (total/3).toFixed(2) + ' لكل ضيف)')" class="py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold">
+                  تقسيم الفاتورة (Split)
+                </button>
+                <button onclick="showToast('تم تعليق الطلب (Hold Order) بنجاح')" class="py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold">
+                  تعليق الطلب (Hold)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTables() {
+      return `
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <h2 class="text-lg font-bold text-white">إدارة الطاولات الذكية، الطلب عبر QR، تطبيق النادل والحجوزات (Phase 5)</h2>
+              <p class="text-xs text-slate-400">رموز QR مشفرة لا تكشف المعرفات الحساسة • دمج ونقل الطاولات • ربط كامل بمحرك الطلبات والمطبخ</p>
+            </div>
+            <button onclick="submitCentralOrder('QR_TABLE')" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs">
+              📱 محاكاة طلب عميل عبر مسح رمز QR للطاولة
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${state.tables.map(t => {
+              const badgeColor = {
+                AVAILABLE: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+                OCCUPIED: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+                RESERVED: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+                WAITING_PAYMENT: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+                CLEANING: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+                UNAVAILABLE: 'bg-slate-700 text-slate-300 border-slate-600'
+              }[t.status] || 'bg-slate-800';
+              return `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                  <div class="flex justify-between items-center">
+                    <div>
+                      <span class="text-lg font-extrabold text-white">${t.num}</span>
+                      <span class="text-xs text-slate-400 mr-2">${t.floor} • ${t.zone}</span>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 rounded-full border font-bold ${badgeColor}">${t.status}</span>
+                  </div>
+                  <div class="text-xs text-slate-300 space-y-1">
+                    <div>السعة: <b>${t.seats} مقاعد</b> • النادل: <b>${t.waiter}</b></div>
+                    <div>رمز QR المشفر: <code class="text-amber-300 bg-slate-950 px-1.5 py-0.5 rounded">${t.qrToken}</code></div>
+                    <div>الطلب المرتبط: <b>${t.orderId || 'لا يوجد طلب نشط'}</b></div>
+                  </div>
+                  <div class="flex gap-2 pt-2">
+                    <button onclick="cycleTableStatus('${t.id}')" class="flex-1 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white">تغيير الحالة</button>
+                    <button onclick="showToast('تم إرسال طلب الفاتورة للطاولة ' + '${t.num}'); t.status='WAITING_PAYMENT'; renderMain();" class="flex-1 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold">طلب الفاتورة</button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Reservations -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <h3 class="font-bold text-sm text-amber-400">جدول الحجوزات المؤكدة (Reservations)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              ${state.reservations.map(r => `
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
+                  <div>
+                    <div class="font-bold text-white">${r.code} • ${r.customer} (${r.phone})</div>
+                    <div class="text-slate-400 mt-0.5">الطاولة: ${r.table} • الموعد: ${r.time} • عدد الضيوف: ${r.pax} • ${r.notes}</div>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold">${r.status}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderKds() {
+      return `
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <h2 class="text-lg font-bold text-white">شاشة المطبخ اللحظية والتوجيه الآلي للمحطات (Phase 6 KDS)</h2>
+              <p class="text-xs text-slate-400">الشواية (Grill) • البيتزا (Pizza) • القلاية (Fryer) • المشروبات (Drinks) • الحلويات (Dessert) • التجميع والتغليف (Expediter)</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            ${state.kdsTickets.map(k => {
+              const overdue = k.elapsed >= k.sla && k.status !== 'COMPLETED';
+              return `
+                <div class="bg-slate-900 border-2 ${overdue ? 'border-rose-500' : 'border-slate-800'} rounded-2xl p-4 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex justify-between items-center">
+                      <span class="font-extrabold text-base text-white">${k.orderId}</span>
+                      <span class="text-xs px-2 py-0.5 rounded font-bold ${overdue ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-300'}">
+                        ⏱️ ${k.elapsed} د ${overdue ? '(متأخر OVERDUE)' : ''}
+                      </span>
+                    </div>
+                    <div class="text-xs text-amber-400 font-bold mt-1">${k.stationAr} • ${k.type}</div>
+                    <ul class="mt-3 space-y-1.5 text-xs text-slate-200 border-t border-slate-800 pt-2">
+                      ${k.items.map(i => `<li class="font-semibold">• ${i}</li>`).join('')}
+                    </ul>
+                  </div>
+                  <div class="pt-3 border-t border-slate-800 flex justify-between items-center">
+                    <span class="text-[11px] text-slate-400">الحالة: <b class="text-white">${k.status}</b></span>
+                    <button onclick="advanceKdsTicket('${k.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs">
+                      المرحلة التالية ➔
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCustomer() {
+      return `
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <h2 class="text-lg font-bold text-white">تطبيق العميل والطلب أونلاين وبرنامج الولاء وCRM (Phase 7)</h2>
+              <p class="text-xs text-slate-400">دخول OTP • توصيل واستلام ومحلي • تتبع الطلب لحظياً • نقاط ومكافآت الولاء • الكوبونات والتقييمات والشكاوى</p>
+            </div>
+            <button onclick="submitCentralOrder('CUSTOMER_APP')" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs">
+              🛒 إرسال طلب توصيل جديد من تطبيق العميل
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            ${state.customers.map(c => `
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-base text-white">${c.name}</span>
+                  <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">${c.tier}</span>
+                </div>
+                <div class="text-xs text-slate-400">${c.phone}</div>
+                <div class="text-xs text-slate-300">العنوان الافتراضي: ${c.address}</div>
+                <div class="pt-2 border-t border-slate-800 flex justify-between text-xs">
+                  <span>نقاط الولاء: <b class="text-amber-400">${c.points} نقطة</b></span>
+                  <span>الإنفاق: <b class="text-emerald-400">$${c.spend.toFixed(2)}</b> (${c.orders} طلب)</span>
+                </div>
+                <button onclick="c.points -= 500; showToast('تم استبدال 500 نقطة ولاء بخصم $10.00 للعميل ' + '${c.name}'); renderMain();" class="w-full mt-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-amber-300">
+                  🎁 استبدال 500 نقطة بخصم $10
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDelivery() {
+      return `
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <h2 class="text-lg font-bold text-white">مركز توجيه التوصيل وتطبيق السائقين وتسوية النقد (Phase 8)</h2>
+              <p class="text-xs text-slate-400">تتبع GPS بموافقة السائق أثناء الوردية فقط • التحقق برمز OTP عند التسليم • تسوية النقد المحصل (COD)</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${state.deliveries.map(d => `
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-base text-white">${d.orderId} • ${d.customer}</span>
+                  <span class="px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 text-xs font-bold">${d.status}</span>
+                </div>
+                <div class="text-xs text-slate-300 space-y-1">
+                  <div>العنوان: ${d.address} (${d.zone})</div>
+                  <div>السائق المعين: <b>${d.driver}</b> • رمز التحقق OTP للعميل: <b class="text-amber-400">${d.otp}</b></div>
+                  <div>المبلغ: <b class="text-emerald-400">$${d.total.toFixed(2)}</b> (${d.cod ? 'دفع عند الاستلام COD' : 'مدفوع إلكترونياً'})</div>
+                </div>
+                <button onclick="advanceDelivery('${d.id}')" class="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs">
+                  تحديث مرحلة التوصيل التالية (Driver App Action) ➔
+                </button>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <h3 class="font-bold text-sm text-amber-400">أسطول السائقين وتسوية عهدة النقد (COD Settlement)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              ${state.drivers.map(drv => `
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
+                  <div>
+                    <div class="font-bold text-white">${drv.name} (${drv.vehicle})</div>
+                    <div class="text-slate-400 mt-0.5">الحالة: ${drv.shift} • موافقة GPS: ${drv.gpsConsent ? 'مفعلة أثناء الوردية' : 'متوقفة'} • توصيلات اليوم: ${drv.completed}</div>
+                  </div>
+                  <button onclick="drv.codUnsettled=0; showToast('تم استلام وتسوية عهدة النقد من السائق ' + '${drv.name}'); renderMain();" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold">
+                    تسوية النقد ($${drv.codUnsettled.toFixed(2)})
+                  </button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderInventory() {
+      return `
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-bold text-white">إدارة المخزون متعدد المستودعات والوصفات والمشتريات (Phase 9)</h2>
+            <p class="text-xs text-slate-400">المستودع المركزي • مستودع الفرع • مستودع المطبخ • دفتر حركات قابل للتتبع الكامل • أوامر الشراء والموردين</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${state.stockItems.map(s => `
+              <div class="bg-slate-900 border ${s.low ? 'border-rose-500/60' : 'border-slate-800'} rounded-2xl p-4 flex justify-between items-center">
+                <div>
+                  <div class="font-bold text-sm text-white">${s.code} • ${s.nameAr}</div>
+                  <div class="text-xs text-slate-400 mt-0.5">${s.warehouse} • تكلفة الوحدة: $${s.cost.toFixed(2)}</div>
+                  <div class="text-xs text-slate-300 mt-1">الكمية الحالية: <b>${s.qty} ${s.unit}</b> (حد إعادة الطلب: ${s.reorder} ${s.unit})</div>
+                </div>
+                <div class="text-left space-y-2">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-bold ${s.low ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}">
+                    ${s.low ? 'تحت حد الطلب LOW' : 'متوفر OPTIMAL'}
+                  </span>
+                  <div>
+                    <button onclick="s.qty += 25; s.low = false; showToast('تم استلام توريد مخزني (+25 ' + '${s.unit}' + ') للصنف ' + '${s.nameAr}'); renderMain();" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-amber-300 font-bold">
+                      + توريد سريع
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <h3 class="font-bold text-sm text-amber-400">دفتر حركات المخزون القابل للتتبع (Traceable Inventory Ledger)</h3>
+            <div class="space-y-2">
+              ${state.inventoryLedger.map(tx => `
+                <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
+                  <div>
+                    <span class="font-bold text-white">${tx.ref}</span> • <span class="text-amber-300">${tx.type}</span>
+                    <div class="text-slate-400">${tx.item} • ${tx.wh} • بواسطة: ${tx.by}</div>
+                  </div>
+                  <div class="text-left font-bold ${tx.delta.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}">
+                    ${tx.delta} <div class="text-[10px] text-slate-500">الرصيد: ${tx.after}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAccounting() {
+      return `
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-bold text-white">النظام المالي والمحاسبي والقيود المزدوجة الآلية (Phase 10)</h2>
+            <p class="text-xs text-slate-400">شجرة الحسابات • القيود اليومية المزدوجة المربوطة بالمستندات • ميزان المراجعة • قائمة الدخل والميزانية • الذمم المدينة والدائنة</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <p class="text-xs text-slate-400">إجمالي الإيرادات (4100)</p>
+              <p class="text-2xl font-extrabold text-emerald-400 mt-1">$18,450.00</p>
+              <p class="text-xs text-slate-500 mt-1">تكلفة المبيعات COGS (5100): -$5,120.00</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <p class="text-xs text-slate-400">المصروفات التشغيلية (6100-6900)</p>
+              <p class="text-2xl font-extrabold text-amber-400 mt-1">$6,910.00</p>
+              <p class="text-xs text-slate-500 mt-1">الرواتب والإيجار والمرافق</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+              <p class="text-xs text-slate-400">صافي الربح (Net Profit)</p>
+              <p class="text-2xl font-extrabold text-emerald-400 mt-1">$6,420.00</p>
+              <p class="text-xs text-emerald-300 mt-1">✔ ميزان المراجعة متوازن (المدين = الدائن)</p>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <h3 class="font-bold text-sm text-amber-400">دفتر القيود اليومية المزدوجة المربوطة بالمستندات (Journal Entries)</h3>
+            <div class="space-y-3">
+              ${state.journals.map(j => `
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs">
+                  <div class="flex justify-between items-center font-bold">
+                    <span class="text-white">${j.num} • المستند المصدر: <span class="text-amber-300">${j.doc}</span></span>
+                    <span class="text-emerald-400">متوازن ($${j.debit.toFixed(2)})</span>
+                  </div>
+                  <div class="text-slate-300 font-semibold">${j.desc}</div>
+                  ${j.lines.map(l => `<div class="text-slate-400 bg-slate-900 px-2.5 py-1 rounded">${l}</div>`).join('')}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderHr() {
+      return `
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-bold text-white">الموارد البشرية، الحضور والانصراف، الورديات والرواتب (Phase 11)</h2>
+            <p class="text-xs text-slate-400">ربط هوية الموظف بالكاشير والنادل والمطبخ والتوصيل والمخزون • مصادر تحقق حضور متعددة • مسيرات رواتب محمية بالصلاحيات</p>
+          </div>
+
+          <div class="space-y-3">
+            ${state.employees.map(e => `
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3 text-xs">
+                <div>
+                  <div class="font-bold text-sm text-white">${e.code} • ${e.name} (${e.role})</div>
+                  <div class="text-slate-400 mt-0.5">القسم: ${e.dept} • وقت الحضور: ${e.checkIn} • المصدر: ${e.source}</div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold">${e.status}</span>
+                  <span class="font-bold text-amber-300">الراتب الصافي: $${e.salary} (${e.payStatus})</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMenu() {
+      return `
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-bold text-white">هندسة المنيو، الوصفات وتكلفة التصنيع وهوامش الربح (Phase 3)</h2>
+            <p class="text-xs text-slate-400">حساب تكلفة الوصفة (Recipe BOM) ونسب الفاقد والربح الإجمالي لكل صنف مع قواعد تسعير القنوات</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${state.products.map(p => {
+              const margin = (((p.price - p.cost) / p.price) * 100).toFixed(1);
+              return `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2 text-xs">
+                  <div class="flex justify-between font-bold text-sm text-white">
+                    <span>${p.nameAr}</span>
+                    <span class="text-emerald-400">$${p.price.toFixed(2)}</span>
+                  </div>
+                  <div class="text-slate-400">SKU: ${p.sku} • الفئة: ${p.cat} • المحطة: ${p.station}</div>
+                  <div class="pt-2 border-t border-slate-800 flex justify-between">
+                    <span>تكلفة الوصفة: <b class="text-rose-300">$${p.cost.toFixed(2)}</b></span>
+                    <span>هامش الربح: <b class="text-emerald-400">${margin}%</b></span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAdmin() {
+      return `
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-bold text-white">الإدارة المؤسسية، الشركات، العلامات التجارية، الفروع والصلاحيات (Phases 1 & 2)</h2>
+            <p class="text-xs text-slate-400">مجموعة الحياة للضيافة (AL-HAYA) • 3 فروع نشطة • مصفوفة صلاحيات RBAC دقيقة وسجل تدقيق غير قابل للتعديل</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
+              <h3 class="font-bold text-amber-400 text-sm">فرع وسط المدينة الرئيسي (DOWNTOWN-HQ)</h3>
+              <p class="text-slate-300">الرياض - طريق الملك فهد • السعة: 120 مقعد • الضريبة: 10%</p>
+              <span class="inline-block px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">نشط ACTIVE</span>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
+              <h3 class="font-bold text-amber-400 text-sm">فرع المرسى بوليفارد (MARINA-BLVD)</h3>
+              <p class="text-slate-300">جدة - كورنيش المرسى • السعة: 95 مقعد • الضريبة: 10%</p>
+              <span class="inline-block px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">نشط ACTIVE</span>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
+              <h3 class="font-bold text-amber-400 text-sm">فرع المطار السريع (AIRPORT-EXP)</h3>
+              <p class="text-slate-300">مطار الملك خالد - صالة 5 • السعة: 40 مقعد • الضريبة: 10%</p>
+              <span class="inline-block px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">نشط ACTIVE</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderReports() {
+      return `
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <h2 class="text-lg font-bold text-white">محرك التقارير الشامل (18 تقريراً)، الإشعارات المركزية والاستعلام الذكي المحمي (Phase 12)</h2>
+            <p class="text-xs text-slate-400">التفصيل المتدرج (المؤشر ➔ التقرير ➔ المستند ➔ القيد ➔ سجل التدقيق) • تصدير CSV / Excel / PDF • استعلام ذكي محمي بالصلاحيات</p>
+          </div>
+
+          <!-- RBAC AI Assistant Boundary -->
+          <div class="bg-slate-900 border border-amber-500/40 rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-sm text-amber-400">🤖 حدود خدمة الاستعلام الذكي المحمي بالصلاحيات (Authorized AI Business Query)</h3>
+              <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">مصرح للدور: ${state.role}</span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="state.aiQuery='ما هي مبيعات أمس واليوم؟'; state.aiAnswer='إجمالي المبيعات المعتمدة: $204.75 (اليوم) و $4,890.00 (أمس) بنمو +14.8% عبر قنوات الكاشير وQR والتوصيل.'; renderMain();" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs">ما هي مبيعات أمس واليوم؟</button>
+              <button onclick="state.aiQuery='ما هي الأصناف منخفضة المخزون؟'; state.aiAnswer='يوجد صنفان تحت حد إعادة الطلب: 1) معجون وزيت الكمأة الإيطالي (المتاح 6.5 L / الحد 10 L)، 2) جبنة بوراتا طازجة (المتاح 8.0 kg / الحد 12 kg).'; renderMain();" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs">ما هي الأصناف منخفضة المخزون؟</button>
+              <button onclick="state.aiQuery='ما هي طلبات التوصيل المتأخرة اليوم؟'; state.aiAnswer='الطلب ORD-1043 (حي العليا - السائق فهد الشمري) قيد التوصيل منذ 19 دقيقة وضمن اتفاقية مستوى الخدمة (SLA: 35 دقيقة).'; renderMain();" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs">ما هي طلبات التوصيل المتأخرة اليوم؟</button>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
+              <div class="text-slate-400">السؤال: <b class="text-white">${state.aiQuery}</b></div>
+              <div class="text-emerald-300 font-semibold">${state.aiAnswer}</div>
+            </div>
+          </div>
+
+          <!-- 5-Stage Drill-Down -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2 text-xs">
+            <h3 class="font-bold text-sm text-white">سلسلة التتبع والتفصيل المتدرج من 5 مراحل (5-Stage Traceability Drill-Down)</h3>
+            <div class="p-2.5 rounded bg-slate-950 text-slate-300">1. <b>مؤشر لوحة القيادة:</b> إجمالي المبيعات ($204.75) وصافي الربح ($6,420.00)</div>
+            <div class="p-2.5 rounded bg-slate-950 text-slate-300">2. <b>التقرير التحليلي:</b> تقرير مبيعات وربحية فرع وسط المدينة الرئيسي (DOWNTOWN-HQ)</div>
+            <div class="p-2.5 rounded bg-slate-950 text-slate-300">3. <b>المستند المصدر:</b> فاتورة الطلب #ORD-1042 (طاولة T-04 عبر QR • $74.80)</div>
+            <div class="p-2.5 rounded bg-slate-950 text-slate-300">4. <b>القيد المحاسبي وحركة المخزون:</b> القيد #JE-2026-0412 + حركة خصم الوصفات #SALE-ORD-1042</div>
+            <div class="p-2.5 rounded bg-slate-950 text-slate-300">5. <b>سجل التدقيق الأمني (Audit Trail):</b> موثق بتوقيع رقمي وطابع زمني غير قابل للحذف</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMain() {
+      const main = document.getElementById('main-content');
+      const map = {
+        dashboard: renderDashboard,
+        pos: renderPos,
+        tables: renderTables,
+        kds: renderKds,
+        customer: renderCustomer,
+        delivery: renderDelivery,
+        inventory: renderInventory,
+        accounting: renderAccounting,
+        hr: renderHr,
+        menu: renderMenu,
+        admin: renderAdmin,
+        reports: renderReports
+      };
+      main.innerHTML = (map[state.activeSection] || renderDashboard)();
+    }
+
+    function renderAll() {
+      renderSidebar();
+      renderMain();
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>
